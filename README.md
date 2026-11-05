@@ -1,6 +1,6 @@
 # Lumora Addon Template
 
-Vorlage für eigene Addons für den **Lumora Client**. Sie enthält die öffentliche **Lumora API 1.1.0** als Quellcode und
+Vorlage für eigene Addons für den **Lumora Client**. Sie enthält die öffentliche **Lumora API 1.3.0** als Quellcode und
 ein fertiges Beispiel-Addon (Session Timer: ein HUD-Widget mit der Zeit in der aktuellen Welt, ein Keybind, eine
 Einstellung und eine Benachrichtigung).
 
@@ -56,7 +56,7 @@ Maven-Repository beziehen:
 
 ```groovy
 repositories { mavenLocal { content { includeGroup 'dev.lumora' } } }
-dependencies { compileOnly 'dev.lumora:lumora-api:1.1.0' }
+dependencies { compileOnly 'dev.lumora:lumora-api:1.3.0' }
 ```
 
 Die API nicht in die eigene JAR einbetten: der Lumora-Client bringt sie mit.
