@@ -12,7 +12,7 @@ werden. Die globale ID ist `<addon-id>:<widget-id>`.
 
 ## Minimalbeispiel
 
-Kompiliert gegen `lumora-api` (aus `addon`, gekürzt):
+Kompiliert gegen `lumora-api` (aus `examples/session-timer-addon`, gekürzt):
 
 ```java
 public final class SessionTimerWidget extends HudWidget {
@@ -107,7 +107,7 @@ IntegerSetting rows = settings.slider("rows", 5, 1, 12);
 DecimalSetting opacity = settings.slider("opacity", 0.85, 0.1, 1.0, 0.05);
 TextSetting title = settings.text("title", "Hallo", 24);
 ChoiceSetting mode = settings.choice("mode", "compact", "compact", "full");
-ColorSetting tint = settings.color("tint", 0xFF18B4CC, false);
+ColorSetting tint = settings.color("tint", 0xFF8B5CF6, false);
 KeybindSetting key = settings.keybind("key", Keys.UNBOUND);
 ```
 

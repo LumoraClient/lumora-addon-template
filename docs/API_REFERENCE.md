@@ -1,8 +1,25 @@
-# Lumora-API – Referenz (Version 1.3.0)
+# Lumora-API – Referenz (Version 1.5.0)
 
-Modul `lumora-api` (Artefakt `dev.lumora:lumora-api:1.1.0`, reines Java 21, keine Abhängigkeiten, keine
+Modul `lumora-api` (Artefakt `dev.lumora:lumora-api:1.5.0`, reines Java 21, keine Abhängigkeiten, keine
 Minecraft-Klassen). Die Implementierung steckt in `lumora-core` und den Minecraft-Adaptern unter `client/mc<version>`;
 Addons sprechen nur mit diesen Schnittstellen. Javadoc: `gradlew :lumora-api:javadoc` (→ `lumora-api/build/docs/javadoc`).
+
+**API 1.5.0** (`LumoraAPI.API_VERSION`) öffnet den Client für Addons: Design (`AddonContext.theme()` mit Akzentfarbe
+und eigenen Akzenten, `ui.UiKit` mit Lumoras Steuerelementen), HUD-Widgets an Ankerzonen
+(`WidgetPlacement.anchored`), Chat (`AddonContext.chat()`: Einträge im Menü von Chat-Nachrichten, `ChatMessageEvent`)
+und Lumora Social (`AddonContext.social()`: Freunde und Party lesen, `SocialChangedEvent`). Neue Berechtigungen:
+`design`, `chat`, `social`. Siehe [dev.lumora.api.ui](#devlumoraapiui-seit-15),
+[dev.lumora.api.chat](#devlumoraapichat-seit-15) und [dev.lumora.api.social](#devlumoraapisocial-seit-15). Addons für
+1.0 bis 1.4 laden unverändert weiter.
+
+**API 1.4.0** (`LumoraAPI.API_VERSION`) bringt das Spielermenü: Addons hängen eigene Einträge an
+(`AddonContext.playerMenu()`, Berechtigung `playermenu`, siehe [dev.lumora.api.interaction](#devlumoraapiinteraction)).
+Addons für 1.0 bis 1.3 laden unverändert weiter.
+
+**API 1.3.0** (`LumoraAPI.API_VERSION`) bringt die Einstellungs-Arten nach dem Vorbild von LabyMod: Häkchen-Kästen,
+Aufklapp-Listen, Knopfreihen, Enums, Buttons, Farben mit Regenbogen, Abschnitte und Einstellungen, die nur bei
+eingeschaltetem Schalter erscheinen (siehe [dev.lumora.api.config](#devlumoraapiconfig)). Addons für 1.0 bis 1.2
+laden unverändert weiter.
 
 **API 1.1.0** (`LumoraAPI.API_VERSION`) ist in `lumora-api`, `lumora-core` und allen 16 Modulen `client/mc<version>`
 umgesetzt. Addons für 1.0 laden unverändert weiter: Beim Laden gilt „gleiche Hauptversion, nicht neuer“, ein Addon mit
@@ -15,7 +32,7 @@ umgesetzt. Addons für 1.0 laden unverändert weiter: Beim Laden gilt „gleiche
 | `AddonContext.channels()` → `net.PluginChannels` | `network` | Plugin-Kanäle `namespace:path` mit Rohbytes, ein Addon pro Kanal |
 | `AddonContext.screens()` → `screen.AddonScreens` | `screens` | Vollbild-Menüs (`AddonView`), Zurück, Zwischenablage, Addon-Einstellungen im Hub, Hauptmenü mit ▶-Knopf im Hub (`registerMenu`) |
 | `AddonContext.nameTags()` → `render.NameTags` | `nametags` | Symbol hinter Spielernamen in Namensschild und Tab-Liste, optional eine Zeile unter dem Namensschild |
-| `AddonContext.configDirectory()`, `modLoaded(id)` | – | `config`-Ordner des Spiels; ob eine Fabric-Mod installiert ist |
+| `AddonContext.configDirectory()`, `modLoaded(id)` | – | `config`-Ordner des Spiels; ob eine Mod mit dieser ID installiert ist |
 
 Die neuen Methoden von `AddonContext` sind `default`-Methoden, die `UnsupportedOperationException("requires Lumora API
 1.1")` werfen; ältere Implementierungen kompilieren so weiter. Im Lumora-Client sind sie alle umgesetzt.
@@ -42,16 +59,21 @@ Grundregeln:
 | Typ | Zweck |
 |---|---|
 | `LumoraAddon` | Einstieg. `onInitialize(ctx)` einmal (Einstellungen definieren), `onEnable(ctx)` (registrieren), `onDisable(ctx)` (eigene Ressourcen freigeben). Öffentlicher Konstruktor ohne Parameter. |
-| `AddonContext` | `descriptor()`, `state()`, `logger()`, `lumora()`, `events()`, `widgets()` (HUD), `keybinds()` (KEYBINDS), `tasks()` (TASKS), `notifications()` (NOTIFICATIONS), `game()` (GAME), `translations()`, `resources()`, `configuration()`, `hasPermission(p)`. Seit 1.1: `world()` (PLAYERS), `session()` (SESSION), `channels()` (NETWORK), `screens()` (SCREENS), `nameTags()` (NAMETAGS), `configDirectory()` (`config`-Ordner des Spiels für eigene Dateien, ohne Berechtigung), `modLoaded(modId)` (ob eine Fabric-Mod mit dieser ID installiert ist, ohne Berechtigung). Ohne Berechtigung: `AddonPermissionException`. Registrieren außerhalb von `onEnable`/aktiv: `IllegalStateException`. |
+| `AddonContext` | `descriptor()`, `state()`, `logger()`, `lumora()`, `events()`, `widgets()` (HUD), `keybinds()` (KEYBINDS), `tasks()` (TASKS), `notifications()` (NOTIFICATIONS), `game()` (GAME), `translations()`, `resources()`, `configuration()`, `hasPermission(p)`. Seit 1.1: `world()` (PLAYERS), `session()` (SESSION), `channels()` (NETWORK), `screens()` (SCREENS), `nameTags()` (NAMETAGS), `configDirectory()` (`config`-Ordner des Spiels für eigene Dateien, ohne Berechtigung), `modLoaded(modId)` (ob eine Mod mit dieser ID installiert ist, ohne Berechtigung). Seit 1.4: `playerMenu()` (PLAYER_MENU). Seit 1.5: `theme()` (ohne Berechtigung; `addAccent` braucht DESIGN), `chat()` (CHAT), `social()` (SOCIAL). Ohne Berechtigung: `AddonPermissionException`. Registrieren außerhalb von `onEnable`/aktiv: `IllegalStateException`. |
 | `AddonDescriptor` | Geprüfte Metadaten (record): `id`, `name`, `version`, `description`, `authors`, `apiVersion`, `minecraftVersions`, `entrypoint`, `dependencies`, `permissions`, `builtIn`, `source`; `supportsMinecraft(v)`. |
 | `AddonDependency` | `id`, `versions` (`VersionRange`), `optional`. Die ID `lumora` steht für die API selbst. |
-| `AddonPermission` | `HUD("hud")`, `KEYBINDS("keybinds")`, `NOTIFICATIONS("notifications")`, `TASKS("tasks")`, `GAME("game")`; seit 1.1 `SCREENS("screens")`, `PLAYERS("players")`, `SESSION("session")`, `NETWORK("network")`, `NAMETAGS("nametags")`. `byId(id)` → Berechtigung oder `null`. |
+| `AddonPermission` | `HUD("hud")`, `KEYBINDS("keybinds")`, `NOTIFICATIONS("notifications")`, `TASKS("tasks")`, `GAME("game")`; seit 1.1 `SCREENS("screens")`, `PLAYERS("players")`, `SESSION("session")`, `NETWORK("network")`, `NAMETAGS("nametags")`; seit 1.4 `PLAYER_MENU("playermenu")`; seit 1.5 `DESIGN("design")`, `CHAT("chat")`, `SOCIAL("social")`. `byId(id)` → Berechtigung oder `null`. |
 | `AddonState` | `LOADED`, `RESOLVED`, `INITIALIZED`, `ENABLING`, `ENABLED`, `DISABLED`, `UNLOADED`, `FAILED`. |
 | `AddonInfo` | `descriptor()`, `state()`, `error()`, `wanted()` (Wahl des Nutzers), `id()`. |
 | `AddonConfiguration` | `settings()` (`SettingsGroup`, gespeichert in `config/lumora/addons/<id>.json`), `save()`. |
 | `AddonLogger` | `info`, `warn`, `error` mit Präfix `[addon-id]`. |
 
 ### lumora-addon.json
+
+Liegt an der Wurzel der Addon-JAR. Lumora lädt Addons mit seinem eigenen Addon-Loader aus dem Ordner `addons` der
+Instanz, ohne Mod-Loader (`JarAddonLoader`, eigener Class-Loader je JAR).
+
+Details stehen in [CREATE_ADDON.md](CREATE_ADDON.md). Die API selbst bleibt dabei unverändert.
 
 ```json
 {
@@ -77,7 +99,6 @@ die neuen Berechtigungen, z. B. LumoraVoice: `["hud", "keybinds", "notifications
 Pflicht: `id` (`[a-z][a-z0-9_-]{1,63}`), `version`, `api`, `entrypoint`. Geprüft beim Laden: Schema, Feldtypen,
 Versionen, Berechtigungen, doppelte IDs, Selbstabhängigkeit; danach API-Version (gleiche Hauptversion, nicht neuer),
 Minecraft-Version, fehlende oder unpassende Abhängigkeiten (Fehler pflanzen sich fort) und Zyklen.
-Die Datei liegt im Wurzelverzeichnis der Mod-JAR neben `fabric.mod.json`.
 
 ## dev.lumora.api.event
 
@@ -90,7 +111,7 @@ entfernt (Hinweis im Spiel). `Cancellable`-Events erreichen spätere Listener na
 
 | Event | Wann (Quelle) |
 |---|---|
-| `client.ClientStartedEvent` | einmal nach dem Laden der Addons (Fabric `CLIENT_STARTED`) |
+| `client.ClientStartedEvent` | einmal nach dem Laden der Addons, wenn der Client bereit ist |
 | `client.ClientStoppingEvent` | beim Beenden, danach werden Addons ausgeschaltet (`CLIENT_STOPPING`) |
 | `client.ClientTickEvent(tick)` | Ende jedes Client-Ticks (`END_CLIENT_TICK`), nur wenn jemand zuhört |
 | `client.WorldJoinEvent(connection)` | Welt/Server betreten (Tick-Vergleich: Spieler und Level vorhanden) |
@@ -118,7 +139,7 @@ entfernt (Hinweis im Spiel). `Cancellable`-Events erreichen spätere Listener na
 | `id()`, `fullId()`, `addonId()`, `settings()` | nach der Registrierung gefüllt |
 | `nameKey()`, `descriptionKey()` | Standard `<addon>.widget.<id>` / `+ .description` |
 | `category()` | `WidgetCategory.GENERAL`, `PLAYER`, `WORLD`, `SERVER`, `COMBAT`, `VOICE`, `TIME` oder eigener Text |
-| `defaultPlacement()` | `WidgetPlacement.at(x, y)[.scaled(s)][.enabledByDefault()]`; x/y = Anteil der freien Fläche 0..1 |
+| `defaultPlacement()` | `WidgetPlacement.at(x, y)[.scaled(s)][.enabledByDefault()]`; x/y = Anteil der freien Fläche 0..1. Seit 1.5 `WidgetPlacement.anchored(zone, offsetX, offsetY)`: hängt an einer der neun Ankerzonen (`WidgetPlacement.ANCHORS`) mit festem Abstand in GUI-Pixeln |
 | `minScale()`, `maxScale()`, `defaultLayer()` | Grenzen (0,25 … 4) und Standard-Ebene |
 | `configure(SettingsGroup)` | Einstellungen beschreiben (einmal, vor `initialize`) |
 | `initialize()`, `onEnable()`, `onDisable()`, `dispose()` | Lebenszyklus |
@@ -133,7 +154,7 @@ entfernt (Hinweis im Spiel). `Cancellable`-Events erreichen spätere Listener na
 | `WidgetRegistry` | `register(widget)` → `Registration` (doppelte ID oder doppelt registrierte Instanz: `IllegalArgumentException`), `all()`, `byCategory(c)`, `find(id)` |
 | `WidgetInfo` | `id()`, `addonId()`, `widget()`, `category()`, `isEnabled()/setEnabled()`, `isShown()/setShown()`, `x()`, `y()`, `scale()`, `layer()`, `failure()` |
 | `RenderContext` | `preview()` (keine Live-Daten → Beispielinhalt), `editing()`, `partialTick()`, `screenWidth()`, `screenHeight()`, `guiScale()`, `timeMillis()`, `game()`, `translations()` |
-| `WidgetPlacement` | record `(x, y, scale, enabled)` |
+| `WidgetPlacement` | record `(x, y, scale, enabled, anchor, offsetX, offsetY)`; der Konstruktor `(x, y, scale, enabled)` von 1.0 gibt es weiter. Anker links/oben: Abstand der linken/oberen Kante zum Rand, rechts/unten: der rechten/unteren Kante, Mitte: Verschiebung aus der Mitte |
 | `HudEditor` | `open()`, `isOpen()`, `activeProfile()`, `profiles()`, `activateProfile(id)` |
 | `WidgetHost` | intern (Core → Widget) |
 
@@ -167,7 +188,7 @@ Symbole hinter Spielernamen: am Namensschild über dem Spieler und am Namen in d
 | `glyph` | Zeichen, das mit dieser Schrift gezeichnet wird (nicht leer); erscheint nach einem Leerzeichen hinter dem Namen |
 | `color` | RGB-Tönung des Zeichens (Weiß lässt eine farbige Textur unverändert) und Farbe des Fallbacks |
 | `fallback` | reiner Text für Versionen ohne eigene Schriften (1.8.9, 1.12.2), z. B. `"♪"`; dort in der nächstliegenden Chatfarbe. `null` → `""` (kein Symbol) |
-| `subtitle` | kleine Zeile unter dem Namensschild (nur `WORLD`), sonst `""`; `null` → `""`. Wird nur auf 26.x und 1.21.11 gezeichnet, siehe `COMPATIBILITY.md` im Lumora-Client |
+| `subtitle` | kleine Zeile unter dem Namensschild (nur `WORLD`), sonst `""`; `null` → `""`. Wird nur auf 26.x und 1.21.11 gezeichnet, siehe [COMPATIBILITY.md](https://github.com/LumoraClient/lumora-launcher/blob/main/docs/COMPATIBILITY.md#lumora-api-11-je-version) |
 
 Ungültige `font` oder leeres `glyph`: `IllegalArgumentException` beim Erzeugen.
 
@@ -261,6 +282,34 @@ Records: `ViewPoint(id, x, y, z, lookX, lookY, lookZ, inWater)`, `PlayerInfo(id,
 teamColor)` (Augenposition; `skyVisible` = Block an der Position sieht den Himmel; `teamColor` = `OptionalInt` mit der
 RGB-Teamfarbe), `TabEntry(id, name)`. `WorldAccess.NONE` ist die leere Implementierung.
 
+## dev.lumora.api.connection und event.connection (seit 1.2)
+
+Lumora verfolgt jede Serververbindung, auch wenn das Modul „Verbindung“ aus ist. Die Events kommen auf dem
+Client-Thread über den normalen Event-Bus (`context.events().subscribe(...)`) und brauchen keine Berechtigung.
+
+| Event | Wann | Inhalt |
+|---|---|---|
+| `ServerConnectingEvent` | Minecraft beginnt zu verbinden (Serverliste, Direktverbindung, Quick Play, Transfer, Neuverbinden) | `connection()`, `attempt()` (0 = erster Versuch, sonst automatisches Neuverbinden) |
+| `ConnectionPhaseEvent` | nächste Phase erreicht | `connection()` (mit neuer `phase()`), `previous()`, `previousMillis()` |
+| `ServerJoinedEvent` | Welt des Servers erreicht | `connection()`, `connectMillis()` |
+| `ServerDisconnectedEvent` | Verbindung beendet oder gescheitert | `connection()`, `lastPhase()`, `kind()` (`DisconnectKind`), `message()`, `reconnectIn()` (ms, −1 = kein automatisches Neuverbinden) |
+
+`ServerConnection(name, address, phase, startedMillis, joinedMillis)`. Phasen (`ConnectionPhase`), in dieser Reihenfolge:
+`CONNECTING`, `LOGIN`, `AUTHENTICATING`, `ENCRYPTING`, `CONFIGURING`, `JOINING`, `PLAYING`, `DISCONNECTED`.
+Offline-Server überspringen Kontoprüfung und Verschlüsselung; vor 1.20.2 gibt es keine Konfiguration.
+
+`DisconnectKind`: `USER`, `TIMEOUT`, `REFUSED`, `UNKNOWN_HOST`, `LOST`, `AUTH`, `BANNED`, `WHITELIST`, `FULL`, `OUTDATED`,
+`THROTTLED`, `SHUTDOWN`, `DUPLICATE_LOGIN`, `KICKED`, `PROTOCOL`, `OTHER`. `retryable()` sagt, ob ein neuer Versuch ohne
+Änderung helfen kann.
+
+```java
+context.events().subscribe(ServerDisconnectedEvent.class, e -> {
+    if (e.kind() == DisconnectKind.FULL) {
+        context.notifications().info("Server voll", "Lumora versucht es gleich noch einmal");
+    }
+});
+```
+
 ## dev.lumora.api.session (seit 1.1)
 
 `SessionService` (`AddonContext.session()`, Berechtigung `session`): das angemeldete Minecraft-Konto. Das Zugriffstoken
@@ -285,7 +334,7 @@ Addon-Code auf jeder Version.
   Bukkit/Paper-Plugin), `send(byte[])` (ohne Verbindung oder ohne Unterstützung wird ignoriert).
 - Kann eine Version einen Kanal nicht anlegen (1.8.9/1.12.2: Name länger als 20 Zeichen), wirft `register` nicht;
   `serverSupports()` bleibt dann `false` und das Log meldet „not available in this Minecraft version“. Technik je
-  Version: `COMPATIBILITY.md` im Lumora-Client.
+  Version: [COMPATIBILITY.md](https://github.com/LumoraClient/lumora-launcher/blob/main/docs/COMPATIBILITY.md#lumora-api-11-je-version).
 
 ## dev.lumora.api.screen (seit 1.1)
 
@@ -313,6 +362,66 @@ einem Bildschirm der laufenden Minecraft-Version und leitet Zeichnen und Eingabe
 | `closeRequested()` | Escape gedrückt; `false` hält die Ansicht offen (Standard `true`) |
 | `removed()` | Ansicht wird nicht mehr gezeigt (geschlossen, vom Spiel ersetzt oder Addon ausgeschaltet) |
 
+## dev.lumora.api.interaction (seit 1.4)
+
+Das **Spielermenü** ist fest im Client eingebaut: Spieler anvisieren, **Mausrad gedrückt halten** – um den Spieler
+erscheint ein Ring. Loslassen über einem Eintrag führt ihn aus; wer nur kurz klickt, wählt danach mit Klick oder
+Mausrad (drehen = nächster Eintrag), Rechtsklick geht zurück, Esc schließt. Über dem Ring steht die Spielerkarte
+(Kopf, Name, ob er Lumora nutzt, Freund/Party), unter dem Ring der gewählte Eintrag. Es gibt nur dieses eine Menü:
+Kategorien öffnen ihre Einträge als äußeren Ring daneben, das Client-Profil erscheint neben dem Ring.
+
+Lumoras eigene Einträge: *Freund hinzufügen* (bzw. *Anfrage annehmen*), *In Party einladen* (bzw. *Party beitreten*,
+*Aus Party entfernen*, *Einladung zurückziehen*), *Client-Profil öffnen*, *Lumora-Nachricht* (nur Freunde), *Privat
+schreiben* (`/msg Name`, nur auf Servern) und *Name kopieren*. Die Social-Einträge erscheinen nur, wenn der Lumora-
+Social-Server verbunden ist und der Spieler Lumora nutzt.
+
+| Typ | Inhalt |
+|---|---|
+| `PlayerMenu` (`AddonContext.playerMenu()`, Berechtigung `playermenu`) | `add(PlayerMenuEntry)` → `Registration`, `entries()`; Einträge verschwinden mit dem Addon |
+| `PlayerMenuEntry.builder(id, label)` | `icon(String)` (ein Zeichen) oder `icon(TextureRef)` (16×16), `label(Function<PlayerTarget,String>)`, `category(name, icon)`, `order(int)`, `requiresPermissionLevel(1..4)`, `requiresLumoraUser()`, `visibleWhen(...)`, `enabledWhen(...)` (sonst ausgegraut), `keepMenuOpen()`, `onSelect(Consumer<PlayerTarget>)` |
+| `PlayerTarget` | `id()`, `name()`, `multiplayer()`, `lumoraUser()`, `friend()`, `inYourParty()`, `partyLeader()`, `permissionLevel()` (eigene OP-Stufe 0–4; auf 1.8.9 und 1.12.2 immer 0) |
+
+```java
+PlayerMenu menu = context.playerMenu();
+menu.add(PlayerMenuEntry.builder("kick", "Kicken")
+        .category("Moderation", "⚒")
+        .requiresPermissionLevel(2)                 // nur mit OP-Stufe 2
+        .visibleWhen(PlayerTarget::multiplayer)
+        .onSelect(t -> chat("/kick " + t.name()))
+        .build());
+```
+
+Eine Bedingung, ein Label oder eine Aktion, die eine Ausnahme wirft, wird einmal geloggt; der Eintrag bleibt danach weg.
+
+## dev.lumora.api.ui (seit 1.5)
+
+| Typ | Inhalt |
+|---|---|
+| `Theme` (`AddonContext.theme()`, ohne Berechtigung) | `style()` („lumora“ oder „vanilla“), `accentId()`, `accent()`, `accentHover()`, `accentDark()`, `background()`, `surface()`, `surface2()`, `border()`, `text()`, `muted()`, `ok()`, `warning()`, `error()`, `accents()` (alle Akzente im Hub), `addAccent(id, name, farbe)` → `Registration` (Berechtigung `design`; Id im Hub `<addon>:<id>`) |
+| `UiKit` (statisch, nur Zeichnen) | `panel`, `card`, `title`, `label`, `hint`, `button`, `secondaryButton`, `toggle` (`TOGGLE_W` × `TOGGLE_H`), `slider` + `sliderValue(mx, x, w)`, `textField` (Platzhalter, blinkender Cursor), `listRow`, `badge`, `inside(mx, my, x, y, w, h)`, `alpha(farbe, a)` |
+
+Die Farben werden bei jedem Aufruf neu gelesen: Wählt der Spieler eine andere Akzentfarbe, folgen Widgets und Menüs
+sofort. Wählt er die Akzentfarbe eines Addons und ist das Addon aus, gilt Lila; mit dem Addon kommt seine Wahl zurück.
+
+## dev.lumora.api.chat (seit 1.5)
+
+| Typ | Inhalt |
+|---|---|
+| `Chat` (`AddonContext.chat()`, Berechtigung `chat`) | `addMenuEntry(ChatMenuEntry)` → `Registration`, `openChat(text)` (Chat mit Text im Eingabefeld, nicht gesendet) |
+| `ChatMenuEntry.builder(id, label)` | `label(Function<ChatLine,String>)`, `visibleWhen(...)`, `onSelect(Consumer<ChatLine>)` – erscheint im Menü einer Chat-Nachricht (Rechtsklick oder ⋯) nach Lumoras Einträgen, solange das Chat-Modul an ist |
+| `ChatLine` | `text()` (ohne Farben und Lumoras Zeitstempel), `sender()` (oder null), `links()` |
+| `event.chat.ChatMessageEvent` | `line()` – jede neue Chat-Nachricht, auch bei ausgeschaltetem Chat-Modul; nur eine Kopie, nicht veränderbar |
+
+## dev.lumora.api.social (seit 1.5)
+
+| Typ | Inhalt |
+|---|---|
+| `SocialInfo` (`AddonContext.social()`, Berechtigung `social`) | nur lesen: `connected()`, `self()`, `friends()` (`Friend(id, name, online, status, server)`), `isFriend(uuid)`, `party()` (`Party(leader, members)`, `contains(uuid)`) |
+| `event.social.SocialChangedEvent` | `kind()`: `CONNECTION`, `FRIENDS`, `PARTY` – den neuen Stand aus `SocialInfo` lesen |
+
+Ohne Verbindung zum Lumora-Social-Server sind alle Listen leer. Nachrichten senden oder Freunde ändern kann ein Addon
+nicht.
+
 ## dev.lumora.api.resource / i18n / task
 
 - `Resources.texture(ns, path)`, `exists(ns, path)` (Speicherabfrage, kein Plattenzugriff). Texturen und Sprachdateien
@@ -336,5 +445,5 @@ Alle Dateien werden verzögert (2 s nach der letzten Änderung) und atomar gesch
 Kaputte Dateien werden als `<name>.corrupt-<zeit>` gesichert, dann gelten Standardwerte.
 
 Eigene Dateien eines Addons (seit 1.1): `AddonContext.configDirectory()` liefert den `config`-Ordner des Spiels
-(`.minecraft/config`, Fabrics Config-Verzeichnis). Was das Addon dort schreibt, verwaltet es selbst; Lumora speichert
+(`.minecraft/config` der Instanz). Was das Addon dort schreibt, verwaltet es selbst; Lumora speichert
 es nicht verzögert und sichert es nicht. Beispiel: LumoraVoice schreibt `config/lumoravoice.json`.
