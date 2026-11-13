@@ -6,7 +6,7 @@ plugins {
 }
 
 // The artifact carries the API version (LumoraAPI.API_VERSION), not the client version.
-version = "1.5.0"
+version = "1.7.0"
 
 java {
     withSourcesJar()
@@ -37,7 +37,7 @@ publishing {
         }
     }
     repositories {
-        // Local repository: gradlew :lumora-api:publish writes build/repo (or use publishToMavenLocal).
+        // Repository inside the project; external addons (e.g. LabyVoice) reference it with a relative path.
         maven {
             name = "lumoraLocal"
             url = rootProject.layout.buildDirectory.dir("repo").get().asFile.toURI()

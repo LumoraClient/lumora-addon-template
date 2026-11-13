@@ -40,11 +40,11 @@ tasks.processResources {
 ```
 
 In einem anderen Projekt: zuerst hier `gradlew :lumora-api:publishToMavenLocal` ausführen (schreibt
-`dev.lumora:lumora-api:1.5.0` in das lokale Maven-Repository), dann im Addon:
+`dev.lumora:lumora-api:1.7.0` in das lokale Maven-Repository), dann im Addon:
 
 ```groovy
 repositories { mavenLocal { content { includeGroup 'dev.lumora' } } }
-dependencies { compileOnly 'dev.lumora:lumora-api:1.5.0' }
+dependencies { compileOnly 'dev.lumora:lumora-api:1.7.0' }
 ```
 
 Die API nicht in die eigene JAR einbetten: der Lumora-Client bringt sie mit.
@@ -67,7 +67,7 @@ Die API nicht in die eigene JAR einbetten: der Lumora-Client bringt sie mit.
 }
 ```
 
-`"api"` ist die **niedrigste** API-Version, die das Addon braucht: Ein Addon mit `"api": "1.1.0"` läuft auch auf 1.5,
+`"api"` ist die **niedrigste** API-Version, die das Addon braucht: Ein Addon mit `"api": "1.1.0"` läuft auch auf 1.7,
 ein älterer Client lehnt ein zu neues Addon mit klarem Hinweis ab. Gib also die Version an, deren Dienste du nutzt.
 
 Nur die Berechtigungen angeben, die gebraucht werden:
@@ -380,3 +380,45 @@ context.events().subscribe(SocialChangedEvent.class, e -> {
 
 Nur lesen: Freunde mit Online-Status (`friends()`, `isFriend`), die Party und das eigene Konto. Ohne Verbindung zum
 Lumora-Social-Server ist alles leer.
+
+## 10. Zeilen am Namensschild und im Item-Tooltip (API 1.7)
+
+Beides braucht `"api": "1.7.0"` und `"depends": { "lumora": ">=1.7.0" }`; die Zeilen am Namensschild zusätzlich die
+Berechtigung `nametags`. Vollständiges Beispiel: das Baublase-Addon (`de.jardateien.baublase.BaublaseService`).
+
+### Zeilen über und unter dem Namen
+
+```java
+context.nameTags().register(new NameTags.Decorator() {
+    @Override
+    public Optional<NameTags.Icon> icon(UUID player, NameTags.Place place) {
+        return Optional.empty();                       // kein Symbol, nur Zeilen
+    }
+
+    @Override
+    public Optional<NameTags.Lines> lines(UUID player) {
+        Double balance = balances.get(player);         // nur nachschlagen: wird jedes Frame gefragt
+        return balance == null ? Optional.empty()
+                : Optional.of(new NameTags.Lines(format(balance) + " €", ""));   // (über dem Namen, unter dem Namen)
+    }
+});
+```
+
+Die Zeilen sehen aus wie der Name selbst (Größe, Kasten, Durchsicht durch Wände) und folgen ihm beim Schleichen.
+Minecrafts Formatierungscodes (`§e`, `§7` …) färben den Text. Eine Punktezeile des Servers unter dem Namen liegt an
+derselben Stelle wie die untere Zeile.
+
+### Zeilen im Item-Tooltip
+
+```java
+context.events().subscribe(ItemTooltipEvent.class, e -> {
+    Price price = prices.get(e.item());                // z. B. "minecraft:diamond"
+    if (price != null) {
+        e.add("");
+        e.add("§7Verkaufspreis: §e" + format(price.sell() * e.count()));
+    }
+});
+```
+
+Das Ereignis kommt jedes Frame, solange ein Tooltip sichtbar ist. Der Listener darf deshalb nur vorbereitete Daten
+nachschlagen und nichts laden.

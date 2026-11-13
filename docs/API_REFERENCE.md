@@ -1,8 +1,17 @@
-# Lumora-API – Referenz (Version 1.5.0)
+# Lumora-API – Referenz (Version 1.7.0)
 
-Modul `lumora-api` (Artefakt `dev.lumora:lumora-api:1.5.0`, reines Java 21, keine Abhängigkeiten, keine
+Modul `lumora-api` (Artefakt `dev.lumora:lumora-api:1.7.0`, reines Java 21, keine Abhängigkeiten, keine
 Minecraft-Klassen). Die Implementierung steckt in `lumora-core` und den Minecraft-Adaptern unter `client/mc<version>`;
 Addons sprechen nur mit diesen Schnittstellen. Javadoc: `gradlew :lumora-api:javadoc` (→ `lumora-api/build/docs/javadoc`).
+
+**API 1.7.0** (`LumoraAPI.API_VERSION`) bringt Textzeilen über und unter dem Namensschild
+(`NameTags.Decorator.lines` → `NameTags.Lines(above, below)`) und eigene Zeilen im Tooltip von Items
+(`event.client.ItemTooltipEvent`: `item()`, `count()`, `add(line)`), beides in allen Minecraft-Versionen. Addons für
+1.0 bis 1.6 laden unverändert weiter.
+
+**API 1.6.0** brachte das Widget-Design: `Theme.widgetStyle()` liefert das Aussehen, das der
+Spieler im Hub für alle Widgets gewählt hat (siehe [dev.lumora.api.ui](#devlumoraapiui-seit-15)). Addons für 1.0 bis
+1.5 laden unverändert weiter.
 
 **API 1.5.0** (`LumoraAPI.API_VERSION`) öffnet den Client für Addons: Design (`AddonContext.theme()` mit Akzentfarbe
 und eigenen Akzenten, `ui.UiKit` mit Lumoras Steuerelementen), HUD-Widgets an Ankerzonen
@@ -115,6 +124,7 @@ entfernt (Hinweis im Spiel). `Cancellable`-Events erreichen spätere Listener na
 | `client.ClientStoppingEvent` | beim Beenden, danach werden Addons ausgeschaltet (`CLIENT_STOPPING`) |
 | `client.ClientTickEvent(tick)` | Ende jedes Client-Ticks (`END_CLIENT_TICK`), nur wenn jemand zuhört |
 | `client.WorldJoinEvent(connection)` | Welt/Server betreten (Tick-Vergleich: Spieler und Level vorhanden) |
+| `client.ItemTooltipEvent` (seit 1.7) | Das Spiel baut den Tooltip eines Items: `item()` (Id wie `minecraft:diamond`), `count()` (Stapelgröße), `add(line)` hängt eine Zeile unter die Zeilen des Spiels (`""` = Leerzeile, `§`-Codes färben). Kommt auf dem Client-Thread, solange ein Tooltip sichtbar ist jedes Frame: nur vorbereitete Daten nachschlagen |
 | `client.WorldLeaveEvent` | Welt verlassen |
 | `client.PlayerChangedEvent(reason, dimension)` | Respawn (neue Spieler-Instanz) oder Dimensionswechsel |
 | `client.ScreenChangedEvent(previous, current)` | Menü geöffnet/geschlossen (Klassenname, `""` = keines) |
@@ -179,13 +189,15 @@ Symbole hinter Spielernamen: am Namensschild über dem Spieler und am Namen in d
 | `NameTags.Decorator` | `icon(UUID player, Place place)` → `Optional<Icon>`; leer = kein Symbol. Wird **jedes Frame** auf dem Render-Thread gefragt, also billig halten. Haben mehrere Addons einen Decorator, gewinnt der erste mit Symbol; ein Decorator, der eine Ausnahme wirft, wird einmal protokolliert und danach übersprungen. |
 | `NameTags.Place` | `WORLD` (Namensschild), `TAB_LIST` |
 | `NameTags.Icon` | record `(font, glyph, color, fallback, subtitle)`, siehe unten |
+| `NameTags.Decorator.lines(UUID player)` (seit 1.7) | → `Optional<Lines>`; Standard: leer. Wird wie `icon` jedes Frame gefragt; der erste Decorator mit Zeilen gewinnt |
+| `NameTags.Lines` (seit 1.7) | record `(above, below)`: eine Textzeile direkt über und eine direkt unter dem Namen, gezeichnet wie der Name selbst (Größe, Kasten, Durchsicht). Reiner Text, Minecrafts Formatierungscodes (`§e` …) färben. Zeigt der Server eine Punktezeile unter dem Namen, liegt sie an derselben Stelle wie `below`. Auf 1.8.9 und 1.12.2 ohne Kasten |
 
 `Icon`-Felder:
 
 | Feld | Bedeutung |
 |---|---|
 | `font` | Schrift-ID `namespace:path` einer Schrift, die das Addon mitbringt (`assets/<namespace>/font/<path>.json`, meist ein Bitmap-Provider, der das Zeichen auf eine Symbol-Textur abbildet); muss `[a-z0-9_.-]+:[a-z0-9_./-]+` entsprechen |
-| `glyph` | Zeichen, das mit dieser Schrift gezeichnet wird (nicht leer); erscheint nach einem Leerzeichen hinter dem Namen |
+| `glyph` | Zeichen, das mit dieser Schrift gezeichnet wird (nicht leer); `WORLD`: rechts neben dem Namensschild (eigener Text ohne Hintergrund, nicht in der Box), `TAB_LIST`: nach einem Leerzeichen hinter dem Namen |
 | `color` | RGB-Tönung des Zeichens (Weiß lässt eine farbige Textur unverändert) und Farbe des Fallbacks |
 | `fallback` | reiner Text für Versionen ohne eigene Schriften (1.8.9, 1.12.2), z. B. `"♪"`; dort in der nächstliegenden Chatfarbe. `null` → `""` (kein Symbol) |
 | `subtitle` | kleine Zeile unter dem Namensschild (nur `WORLD`), sonst `""`; `null` → `""`. Wird nur auf 26.x und 1.21.11 gezeichnet, siehe [COMPATIBILITY.md](https://github.com/LumoraClient/lumora-launcher/blob/main/docs/COMPATIBILITY.md#lumora-api-11-je-version) |
@@ -364,16 +376,16 @@ einem Bildschirm der laufenden Minecraft-Version und leitet Zeichnen und Eingabe
 
 ## dev.lumora.api.interaction (seit 1.4)
 
-Das **Spielermenü** ist fest im Client eingebaut: Spieler anvisieren, **Mausrad gedrückt halten** – um den Spieler
-erscheint ein Ring. Loslassen über einem Eintrag führt ihn aus; wer nur kurz klickt, wählt danach mit Klick oder
-Mausrad (drehen = nächster Eintrag), Rechtsklick geht zurück, Esc schließt. Über dem Ring steht die Spielerkarte
-(Kopf, Name, ob er Lumora nutzt, Freund/Party), unter dem Ring der gewählte Eintrag. Es gibt nur dieses eine Menü:
-Kategorien öffnen ihre Einträge als äußeren Ring daneben, das Client-Profil erscheint neben dem Ring.
+Das **Spielermenü** ist fest im Client eingebaut: Spieler anvisieren, **Mausrad gedrückt halten** – in der Mitte
+erscheint ein Fenster *Spieler-Interaktionen*: links die Spielerkarte (Kopf, Name, Freund/Lumora, Online, Ping aus der
+Tab-Liste, Lumora-Profil), rechts die Einträge als Liste. Loslassen über einem Eintrag führt ihn aus; wer nur kurz
+klickt, wählt danach mit Klick, Mausrad oder Pfeiltasten (Enter führt aus), Rechtsklick geht zurück, Esc oder ✕
+schließt. Es gibt nur dieses eine Menü: Kategorien öffnen ihre Einträge als eigene Liste mit einer Zeile zurück.
 
-Lumoras eigene Einträge: *Freund hinzufügen* (bzw. *Anfrage annehmen*), *In Party einladen* (bzw. *Party beitreten*,
-*Aus Party entfernen*, *Einladung zurückziehen*), *Client-Profil öffnen*, *Lumora-Nachricht* (nur Freunde), *Privat
-schreiben* (`/msg Name`, nur auf Servern) und *Name kopieren*. Die Social-Einträge erscheinen nur, wenn der Lumora-
-Social-Server verbunden ist und der Spieler Lumora nutzt.
+Lumoras eigene Einträge: *Freund hinzufügen* (bzw. *Anfrage annehmen*), *In Party einladen* (schickt
+`/party invite Name` an den Server, nur auf Servern), *Lumora-Nachricht* (nur Freunde), *Privat schreiben*
+(`/msg Name`, nur auf Servern) und *Name kopieren*. Die Social-Einträge erscheinen nur, wenn Lumora Social
+eingerichtet ist; ohne Verbindung sind sie mit Grund ausgegraut.
 
 | Typ | Inhalt |
 |---|---|
@@ -399,9 +411,25 @@ Eine Bedingung, ein Label oder eine Aktion, die eine Ausnahme wirft, wird einmal
 |---|---|
 | `Theme` (`AddonContext.theme()`, ohne Berechtigung) | `style()` („lumora“ oder „vanilla“), `accentId()`, `accent()`, `accentHover()`, `accentDark()`, `background()`, `surface()`, `surface2()`, `border()`, `text()`, `muted()`, `ok()`, `warning()`, `error()`, `accents()` (alle Akzente im Hub), `addAccent(id, name, farbe)` → `Registration` (Berechtigung `design`; Id im Hub `<addon>:<id>`) |
 | `UiKit` (statisch, nur Zeichnen) | `panel`, `card`, `title`, `label`, `hint`, `button`, `secondaryButton`, `toggle` (`TOGGLE_W` × `TOGGLE_H`), `slider` + `sliderValue(mx, x, w)`, `textField` (Platzhalter, blinkender Cursor), `listRow`, `badge`, `inside(mx, my, x, y, w, h)`, `alpha(farbe, a)` |
+| `WidgetStyle` (`Theme.widgetStyle()`, seit 1.6) | Das Aussehen aller Widgets aus dem Modul *Widget-Design*: `active()`, `background()`, `backgroundColor()`, `cornerRadius()`, `border()`, `borderColor()`, `accentBar()`, `accentColor()`, `labelColor()`, `valueColor()`, `textShadow()`, `format()` (`space`, `colon`, `brackets`, `value_first`, `value_only`), `uppercaseLabels()`, `scale()`, `label(text)`; Zeichnen: `panel(g, w, h)`, `lineWidth(g, label, value)`, `line(g, x, y, label, value)`. `WidgetStyle.NONE`: nicht aktiv |
 
 Die Farben werden bei jedem Aufruf neu gelesen: Wählt der Spieler eine andere Akzentfarbe, folgen Widgets und Menüs
 sofort. Wählt er die Akzentfarbe eines Addons und ist das Addon aus, gilt Lila; mit dem Addon kommt seine Wahl zurück.
+
+**Widget-Design (seit 1.6):** Schaltet der Spieler im Hub das Modul *Widget-Design* ein, legt es Hintergrund, Rand,
+Ecken, Akzentstreifen, Farben, Textschatten, Format („FPS 60“, „FPS: 60“, „[FPS] 60“, „60 FPS“, „60“) und Größe aller
+Widgets fest. Die Größe wendet Lumora selbst auf jedes Widget an, auch auf Addon-Widgets. Für den Rest fragt ein
+Addon-Widget `context.theme().widgetStyle()`: Solange `active()` gilt, zeichnet es damit statt mit den eigenen
+Einstellungen (und blendet diese am besten mit `visibleWhen(() -> !style.active())` aus). Mit dem RGB-Effekt ändern sich die Farben von Bild zu Bild: in `render` jedes Mal neu lesen. Beispiel im Session-Timer:
+
+```java
+WidgetStyle style = context.theme().widgetStyle();
+if (style.active()) {
+    int w = style.lineWidth(g, "Session", text) + 12;
+    style.panel(g, w, 17);
+    style.line(g, 6, 5, "Session", text);
+}
+```
 
 ## dev.lumora.api.chat (seit 1.5)
 
