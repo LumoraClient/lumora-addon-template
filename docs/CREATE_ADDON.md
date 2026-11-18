@@ -40,11 +40,11 @@ tasks.processResources {
 ```
 
 In einem anderen Projekt: zuerst hier `gradlew :lumora-api:publishToMavenLocal` ausführen (schreibt
-`dev.lumora:lumora-api:1.9.0` in das lokale Maven-Repository), dann im Addon:
+`dev.lumora:lumora-api:1.11.0` in das lokale Maven-Repository), dann im Addon:
 
 ```groovy
 repositories { mavenLocal { content { includeGroup 'dev.lumora' } } }
-dependencies { compileOnly 'dev.lumora:lumora-api:1.9.0' }
+dependencies { compileOnly 'dev.lumora:lumora-api:1.11.0' }
 ```
 
 Die API nicht in die eigene JAR einbetten: der Lumora-Client bringt sie mit.
@@ -88,6 +88,7 @@ Nur die Berechtigungen angeben, die gebraucht werden:
 | `design` | 1.5 | eigene Akzentfarben im Hub (das Theme lesen geht ohne) |
 | `chat` | 1.5 | Einträge im Menü von Chat-Nachrichten, Chat öffnen |
 | `social` | 1.5 | Freunde und Party von Lumora Social lesen |
+| `building` | 1.10 | Bauwerkzeuge im Kreativmodus: Block-States lesen, abbauen, setzen, Pick-Block, Kreativ-Slots, Klick-Haken (nur 26.1 und neuer) |
 
 Event-Bus, Übersetzungen, Ressourcen, die Addon-Einstellungen, das Theme sowie `configDirectory()` und `modLoaded(id)`
 gehen immer. Felder: siehe [API_REFERENCE.md](API_REFERENCE.md#lumora-addonjson).
@@ -449,3 +450,31 @@ Zeichen einer eigenen Schrift (`ChatIcons.Icon(font, glyph)`), wie die Namenssch
 Hover-Texte der Nachricht bleiben, Kopieren gibt `:name:` zurück, nur die eigene Anzeige ändert sich. Auf 1.8.9 und
 1.12.2 (keine eigenen Schriften) bleibt der Text stehen. Lumoras eingebautes Modul *Emoji Chat* (Twemoji, Picker,
 Vorschläge beim Tippen von `:jo`) ist genau mit dieser API gebaut.
+
+## 12. Bauwerkzeuge im Kreativmodus (API 1.10 und 1.11)
+
+`context.building()` gibt einem Addon die Handgriffe beim Bauen: den anvisierten Block mit seinen Block-States,
+Abbauen, Setzen, Pick-Block, Hotbar-Slots über das Kreativ-Inventar und Haken vor jedem Rechtsklick und Mittelklick.
+Braucht die Berechtigung `building`, `"api": "1.10.0"` (für `blockIds`, `averageColor`, `creativeItems`, `highlight`
+und `HudGraphics.item`: `"1.11.0"`) und passend `"depends": { "lumora": ">=1.10.0" }`. Umgesetzt nur in den Clients
+für Minecraft 26.1 und neuer, deshalb `"minecraft": ["26.*"]` setzen oder `building().available()` prüfen.
+
+```java
+Building building = context.building();
+
+// Rechtsklick auf Türen, Kisten, Hebel … setzt den Block in der Hand daneben, wie mit Schleichen
+building.onUse((hit, held) ->
+        hit.block().interactive() && held.block() ? UseHandler.Decision.AS_SNEAKING : UseHandler.Decision.NORMAL);
+
+// Mittelklick nimmt den Block mit Drehung und Variante in die Hand
+building.onPick(hit -> building.setCreativeSlot(building.selectedSlot(), building.pick(hit, true)));
+
+// API 1.11: den anvisierten Block grün umranden
+building.target().ifPresent(hit -> building.highlight(hit.x(), hit.y(), hit.z(), 0xFF55FF55));
+```
+
+Alles ist eine normale Spielaktion, die ein Spieler im Kreativmodus auch selbst machen könnte: Lumora schickt nur die
+üblichen Pakete, nie öfter oder weiter, als der Server erlaubt, und keine Befehle. Außerhalb des Kreativmodus geben die
+Aktionen `false` zurück; den Wechsel des Spielmodus prüft das Addon selbst über `building.creative()`. Haken und
+Umrandungen verschwinden, wenn das Addon ausgeschaltet wird. Ein vollständiges Addon mit diesen Werkzeugen ist
+*BuildingUtilities*.

@@ -1,10 +1,20 @@
-# Lumora-API – Referenz (Version 1.9.0)
+# Lumora-API – Referenz (Version 1.11.0)
 
-Modul `lumora-api` (Artefakt `dev.lumora:lumora-api:1.9.0`, reines Java 21, keine Abhängigkeiten, keine
+Modul `lumora-api` (Artefakt `dev.lumora:lumora-api:1.11.0`, reines Java 21, keine Abhängigkeiten, keine
 Minecraft-Klassen). Die Implementierung steckt in `lumora-core` und den Minecraft-Adaptern unter `client/mc<version>`;
 Addons sprechen nur mit diesen Schnittstellen. Javadoc: `gradlew :lumora-api:javadoc` (→ `lumora-api/build/docs/javadoc`).
 
-**API 1.9.0** (`LumoraAPI.API_VERSION`) bringt Knöpfe und Fenster an der Chat-Eingabe (`Chat.addInputButton` mit
+**API 1.11.0** (`LumoraAPI.API_VERSION`, ab Lumora 0.3.72) erweitert die Bauwerkzeuge: alle Blöcke mit Item
+(`Building.blockIds()`), die mittlere Texturfarbe eines Blocks (`averageColor`), Items des Kreativ-Inventars mit Suche
+(`creativeItems`), Umrandungen von Blöcken in der Welt (`highlight`) und Item-Bilder in Addon-Fenstern
+(`HudGraphics.item`). Addons für 1.0 bis 1.10 laden unverändert weiter.
+
+**API 1.10.0** (ab Lumora 0.3.71) brachte die Bauwerkzeuge für den Kreativmodus (`AddonContext.building()`,
+Berechtigung `building`, siehe [dev.lumora.api.building](#devlumoraapibuilding-seit-110)): anvisierter Block mit
+Block-States, Abbauen, Setzen, Pick-Block, Hotbar-Slots über das Kreativ-Inventar, Wartezeiten bei gehaltener
+Maustaste und Haken vor Rechtsklick und Mittelklick. Nur in den Clients für Minecraft 26.1 und neuer umgesetzt.
+
+**API 1.9.0** brachte Knöpfe und Fenster an der Chat-Eingabe (`Chat.addInputButton` mit
 `ChatInputButton` und `ChatPanel`), Icons in Chatnachrichten für `:name:` (`Chat.addIcons` → `ChatIcons`) und Text in die
 Chat-Eingabe (`Chat.insertText`, `input()`, `closePanel()`) – Lumoras Gegenstück zu LabyMods Chat-Eingabe-Knöpfen und
 `IconComponent`. Das eingebaute Modul *Emoji Chat* nutzt genau diese API. Addons für 1.0 bis 1.8 laden unverändert weiter.
@@ -77,7 +87,7 @@ Grundregeln:
 | Typ | Zweck |
 |---|---|
 | `LumoraAddon` | Einstieg. `onInitialize(ctx)` einmal (Einstellungen definieren), `onEnable(ctx)` (registrieren), `onDisable(ctx)` (eigene Ressourcen freigeben). Öffentlicher Konstruktor ohne Parameter. |
-| `AddonContext` | `descriptor()`, `state()`, `logger()`, `lumora()`, `events()`, `widgets()` (HUD), `keybinds()` (KEYBINDS), `tasks()` (TASKS), `notifications()` (NOTIFICATIONS), `game()` (GAME), `translations()`, `resources()`, `configuration()`, `hasPermission(p)`. Seit 1.1: `world()` (PLAYERS), `session()` (SESSION), `channels()` (NETWORK), `screens()` (SCREENS), `nameTags()` (NAMETAGS), `configDirectory()` (`config`-Ordner des Spiels für eigene Dateien, ohne Berechtigung), `modLoaded(modId)` (ob eine Mod mit dieser ID installiert ist, ohne Berechtigung). Seit 1.4: `playerMenu()` (PLAYER_MENU). Seit 1.5: `theme()` (ohne Berechtigung; `addAccent` braucht DESIGN), `chat()` (CHAT), `social()` (SOCIAL). Seit 1.8: `textures()` (Laufzeit-Texturen, ohne Berechtigung). Seit 1.9: an `chat()` die Chat-Eingabe-Knöpfe, Panels und Icons. Ohne Berechtigung: `AddonPermissionException`. Registrieren außerhalb von `onEnable`/aktiv: `IllegalStateException`. |
+| `AddonContext` | `descriptor()`, `state()`, `logger()`, `lumora()`, `events()`, `widgets()` (HUD), `keybinds()` (KEYBINDS), `tasks()` (TASKS), `notifications()` (NOTIFICATIONS), `game()` (GAME), `translations()`, `resources()`, `configuration()`, `hasPermission(p)`. Seit 1.1: `world()` (PLAYERS), `session()` (SESSION), `channels()` (NETWORK), `screens()` (SCREENS), `nameTags()` (NAMETAGS), `configDirectory()` (`config`-Ordner des Spiels für eigene Dateien, ohne Berechtigung), `modLoaded(modId)` (ob eine Mod mit dieser ID installiert ist, ohne Berechtigung). Seit 1.4: `playerMenu()` (PLAYER_MENU). Seit 1.5: `theme()` (ohne Berechtigung; `addAccent` braucht DESIGN), `chat()` (CHAT), `social()` (SOCIAL). Seit 1.8: `textures()` (Laufzeit-Texturen, ohne Berechtigung). Seit 1.9: an `chat()` die Chat-Eingabe-Knöpfe, Panels und Icons. Seit 1.10: `building()` (BUILDING). Ohne Berechtigung: `AddonPermissionException`. Registrieren außerhalb von `onEnable`/aktiv: `IllegalStateException`. |
 | `AddonDescriptor` | Geprüfte Metadaten (record): `id`, `name`, `version`, `description`, `authors`, `apiVersion`, `minecraftVersions`, `entrypoint`, `dependencies`, `permissions`, `builtIn`, `source`; `supportsMinecraft(v)`. |
 | `AddonDependency` | `id`, `versions` (`VersionRange`), `optional`. Die ID `lumora` steht für die API selbst. |
 | `AddonPermission` | `HUD("hud")`, `KEYBINDS("keybinds")`, `NOTIFICATIONS("notifications")`, `TASKS("tasks")`, `GAME("game")`; seit 1.1 `SCREENS("screens")`, `PLAYERS("players")`, `SESSION("session")`, `NETWORK("network")`, `NAMETAGS("nametags")`; seit 1.4 `PLAYER_MENU("playermenu")`; seit 1.5 `DESIGN("design")`, `CHAT("chat")`, `SOCIAL("social")`. `byId(id)` → Berechtigung oder `null`. |
@@ -184,6 +194,7 @@ entfernt (Hinweis im Spiel). `Cancellable`-Events erreichen spätere Listener na
 `texture(TextureRef, x, y, w, h, u, v, regionW, regionH, texW, texH)`, `texture(ref, x, y, w, h, texW, texH)`,
 `push()`/`pop()`, `translate`, `scale`, `enableScissor`/`disableScissor`, `unwrap(Class)` (nativer Renderer der
 Version, z. B. `GuiGraphicsExtractor` in 26.1.2, `GuiGraphics` in 1.21.x – Code damit läuft nur auf dieser Version).
+Seit 1.11: `item(ItemSpec, x, y)` zeichnet ein Item-Bild (16 × 16); auf Versionen ohne Bauwerkzeuge (vor 26.1) nichts.
 
 `TextureRef(namespace, path)` – einmal anlegen und behalten. `Colors` – `argb`, `withAlpha`, `fade`, `mix`, `toHex`,
 `parseHex` und die Lumora-Farben (`ACCENT`, `TEXT`, `MUTED`, `SURFACE`, `BORDER`, `OK`, `WARNING`, `ERROR`, …).
@@ -507,6 +518,28 @@ Zur Schrift gehört `assets/myaddon/font/icons.json` mit
 | `ChatInputTabActivity` mit LSS-Datei | `ChatPanel`: eigenes Zeichnen mit `HudGraphics`, Größe aus `width()`/`height()` |
 | `chatExecutor().insertText(text)` | `context.chat().insertText(text)` |
 | `ChatReceiveEvent.setMessage(...)` mit `Component.icon(icon, style, w, h, placeholder)` | `context.chat().addIcons(...)`: Lumora ersetzt `:name:` selbst, das Icon ist ein Zeichen einer Addon-Schrift; der Platzhalter ist der `:name:`-Text |
+
+## dev.lumora.api.building (seit 1.10)
+
+`AddonContext.building()` → `Building`, Berechtigung `building`, nur Client-Thread. Alles ist eine normale Spielaktion,
+die ein Spieler im Kreativmodus auch mit Maus, Tastatur und Kreativ-Inventar könnte: Lumora schickt nur die üblichen
+Pakete (Abbauen, Setzen, Hotbar-Slot, Kreativ-Slot, Schleichen), nie öfter oder weiter, als der Server erlaubt, und
+keine Befehle. Aktionen, die Welt oder Inventar ändern, wirken nur im Kreativmodus und geben sonst `false` zurück.
+Umgesetzt in den Clients für **26.1.2, 26.2 und 26.3**; auf älteren Versionen ist `available()` `false` und jede Aktion
+tut nichts.
+
+| Typ | Inhalt |
+|---|---|
+| `Building` | `available()`, `creative()`, `target()` (`Optional<BlockHit>`, Block unter dem Fadenkreuz in normaler Reichweite), `block(x, y, z)`, `selectedSlot()`, `selectHotbar(slot)`, `hotbar(slot)`, `mainHand()`, `setCreativeSlot(slot, ItemSpec)`, `pick(hit, withState)`, `breakBlock(hit)`, `place(hit)` (Rechtsklick mit dem gewählten Item, ohne die `UseHandler` zu fragen), `setUseDelay(ticks)` / `setBreakDelay(ticks)` (Wartezeit bei gehaltener Maustaste, Minecraft: 4 bzw. 5, `-1` = Minecraft), `onUse(UseHandler)`, `onPick(PickHandler)` → `Registration`. Seit 1.11: `blockIds()`, `averageColor(blockId)` (`0xAARRGGBB`, Alpha = Anteil deckender Pixel, gefärbte Texturen wie Gras zählen ungefärbt, 0 = unbekannt), `creativeItems(search, blocksOnly)`, `highlight(x, y, z, argb)` → `Registration` |
+| `BlockHit(x, y, z, face, hitX, hitY, hitZ, block)` | Treffer mit Seite (`"up"`, `"north"` …) und Trefferpunkt; `at(x, y, z, block)` verschiebt ihn |
+| `BlockInfo(id, properties, values, interactive, container)` | Block-ID, aktuelle Block-States, erlaubte Werte je State, ob ein Rechtsklick ihn benutzt (Tür, Hebel …), ob er Inhalt hat (Kiste …); `AIR`, `isAir()`, `state()` (`id[a=b,…]`) |
+| `ItemSpec(id, count, blockState, block, name)` | Item mit optionalem Block-State (Komponente `block_state`); `EMPTY`, `ofBlock(id)`, `isEmpty()`, `sameAs(other)`, `withBlockState(map)` |
+| `UseHandler` | `onUse(hit, held)` vor jedem Rechtsklick auf einen Block → `NORMAL`, `AS_SNEAKING` (Block nicht benutzen, Item daneben setzen wie mit Schleichen) oder `CANCEL`; der erste Handler, der nicht `NORMAL` antwortet, entscheidet |
+| `PickHandler` | `onPick(hit)` beim Mittelklick auf einen Block; `true` = erledigt, Minecrafts eigenes Pick-Block entfällt |
+
+Haken, Wartezeiten und Umrandungen gehören dem Addon und verschwinden, wenn es ausgeschaltet wird. Ein Handler, der
+eine Ausnahme wirft, wird übersprungen, die anderen laufen weiter. Lehnt der Server eine Aktion ab, bleibt es dabei;
+die API umgeht keine Server-Prüfungen.
 
 ## dev.lumora.api.social (seit 1.5)
 
