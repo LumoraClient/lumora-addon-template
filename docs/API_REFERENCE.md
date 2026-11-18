@@ -1,10 +1,14 @@
-# Lumora-API – Referenz (Version 1.11.0)
+# Lumora-API – Referenz (Version 1.12.0)
 
-Modul `lumora-api` (Artefakt `dev.lumora:lumora-api:1.11.0`, reines Java 21, keine Abhängigkeiten, keine
+Modul `lumora-api` (Artefakt `dev.lumora:lumora-api:1.12.0`, reines Java 21, keine Abhängigkeiten, keine
 Minecraft-Klassen). Die Implementierung steckt in `lumora-core` und den Minecraft-Adaptern unter `client/mc<version>`;
 Addons sprechen nur mit diesen Schnittstellen. Javadoc: `gradlew :lumora-api:javadoc` (→ `lumora-api/build/docs/javadoc`).
 
-**API 1.11.0** (`LumoraAPI.API_VERSION`, ab Lumora 0.3.72) erweitert die Bauwerkzeuge: alle Blöcke mit Item
+**API 1.12.0** (`LumoraAPI.API_VERSION`, ab Lumora 0.3.73) bringt für die Bauwerkzeuge NoClip beim Fliegen im
+Kreativmodus (`Building.setNoClip`, `noClip()`), Blockmerkmale für Filter (`blockTraits` → `BlockTraits`) und die Farbe
+von Items (`itemColor`). Addons für 1.0 bis 1.11 laden unverändert weiter.
+
+**API 1.11.0** (ab Lumora 0.3.72) erweiterte die Bauwerkzeuge: alle Blöcke mit Item
 (`Building.blockIds()`), die mittlere Texturfarbe eines Blocks (`averageColor`), Items des Kreativ-Inventars mit Suche
 (`creativeItems`), Umrandungen von Blöcken in der Welt (`highlight`) und Item-Bilder in Addon-Fenstern
 (`HudGraphics.item`). Addons für 1.0 bis 1.10 laden unverändert weiter.
@@ -534,10 +538,18 @@ tut nichts.
 | `BlockHit(x, y, z, face, hitX, hitY, hitZ, block)` | Treffer mit Seite (`"up"`, `"north"` …) und Trefferpunkt; `at(x, y, z, block)` verschiebt ihn |
 | `BlockInfo(id, properties, values, interactive, container)` | Block-ID, aktuelle Block-States, erlaubte Werte je State, ob ein Rechtsklick ihn benutzt (Tür, Hebel …), ob er Inhalt hat (Kiste …); `AIR`, `isAir()`, `state()` (`id[a=b,…]`) |
 | `ItemSpec(id, count, blockState, block, name)` | Item mit optionalem Block-State (Komponente `block_state`); `EMPTY`, `ofBlock(id)`, `isEmpty()`, `sameAs(other)`, `withBlockState(map)` |
+| `BlockTraits(fullCube, solid, opaque, sameTexture)` (seit 1.12) | Was ein Block ist: voller Würfel (Kollisionsform), fest, undurchsichtig, gleiche Textur auf allen sechs Seiten; `NONE` für unbekannt |
 | `UseHandler` | `onUse(hit, held)` vor jedem Rechtsklick auf einen Block → `NORMAL`, `AS_SNEAKING` (Block nicht benutzen, Item daneben setzen wie mit Schleichen) oder `CANCEL`; der erste Handler, der nicht `NORMAL` antwortet, entscheidet |
 | `PickHandler` | `onPick(hit)` beim Mittelklick auf einen Block; `true` = erledigt, Minecrafts eigenes Pick-Block entfällt |
 
-Haken, Wartezeiten und Umrandungen gehören dem Addon und verschwinden, wenn es ausgeschaltet wird. Ein Handler, der
+Seit 1.12 an `Building`: `blockTraits(blockId)` → `BlockTraits`, `itemColor(itemId)` (Farbe eines Items wie
+`averageColor`; Block-Items wie ihr Block, sonst die Item-Textur) und `setNoClip(on)` / `noClip()`: Beim Fliegen im
+Kreativmodus fliegt der eigene Spieler durch Blöcke wie im Zuschauermodus. In der eigenen Welt (Einzelspieler oder als
+LAN-Host) lässt Lumora ihn durch; auf anderen Servern nur, soweit der Server die Bewegung annimmt. Setzt der Server
+den Spieler aus einem Block zurück, schaltet sich NoClip selbst ab und `noClip()` wird `false`; es wird nichts
+umgangen.
+
+Haken, Wartezeiten, Umrandungen und NoClip gehören dem Addon und verschwinden, wenn es ausgeschaltet wird. Ein Handler, der
 eine Ausnahme wirft, wird übersprungen, die anderen laufen weiter. Lehnt der Server eine Aktion ab, bleibt es dabei;
 die API umgeht keine Server-Prüfungen.
 

@@ -40,11 +40,11 @@ tasks.processResources {
 ```
 
 In einem anderen Projekt: zuerst hier `gradlew :lumora-api:publishToMavenLocal` ausführen (schreibt
-`dev.lumora:lumora-api:1.11.0` in das lokale Maven-Repository), dann im Addon:
+`dev.lumora:lumora-api:1.12.0` in das lokale Maven-Repository), dann im Addon:
 
 ```groovy
 repositories { mavenLocal { content { includeGroup 'dev.lumora' } } }
-dependencies { compileOnly 'dev.lumora:lumora-api:1.11.0' }
+dependencies { compileOnly 'dev.lumora:lumora-api:1.12.0' }
 ```
 
 Die API nicht in die eigene JAR einbetten: der Lumora-Client bringt sie mit.
@@ -451,12 +451,13 @@ Hover-Texte der Nachricht bleiben, Kopieren gibt `:name:` zurück, nur die eigen
 1.12.2 (keine eigenen Schriften) bleibt der Text stehen. Lumoras eingebautes Modul *Emoji Chat* (Twemoji, Picker,
 Vorschläge beim Tippen von `:jo`) ist genau mit dieser API gebaut.
 
-## 12. Bauwerkzeuge im Kreativmodus (API 1.10 und 1.11)
+## 12. Bauwerkzeuge im Kreativmodus (API 1.10 bis 1.12)
 
 `context.building()` gibt einem Addon die Handgriffe beim Bauen: den anvisierten Block mit seinen Block-States,
 Abbauen, Setzen, Pick-Block, Hotbar-Slots über das Kreativ-Inventar und Haken vor jedem Rechtsklick und Mittelklick.
 Braucht die Berechtigung `building`, `"api": "1.10.0"` (für `blockIds`, `averageColor`, `creativeItems`, `highlight`
-und `HudGraphics.item`: `"1.11.0"`) und passend `"depends": { "lumora": ">=1.10.0" }`. Umgesetzt nur in den Clients
+und `HudGraphics.item`: `"1.11.0"`; für `blockTraits`, `itemColor` und NoClip: `"1.12.0"`) und passend
+`"depends": { "lumora": ">=1.10.0" }`. Umgesetzt nur in den Clients
 für Minecraft 26.1 und neuer, deshalb `"minecraft": ["26.*"]` setzen oder `building().available()` prüfen.
 
 ```java
@@ -471,6 +472,12 @@ building.onPick(hit -> building.setCreativeSlot(building.selectedSlot(), buildin
 
 // API 1.11: den anvisierten Block grün umranden
 building.target().ifPresent(hit -> building.highlight(hit.x(), hit.y(), hit.z(), 0xFF55FF55));
+
+// API 1.12: NoClip an; im Tick prüfen, ob der Server es abgelehnt hat
+building.setNoClip(true);
+if (!building.noClip()) {
+    context.notifications().warning("NoClip", "Der Server lässt es nicht zu");
+}
 ```
 
 Alles ist eine normale Spielaktion, die ein Spieler im Kreativmodus auch selbst machen könnte: Lumora schickt nur die
